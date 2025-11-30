@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سیستم ثبت برگه‌های ارزیابی</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .evaluation-type {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .type-select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .form-container {
+            padding: 30px;
+        }
+
+        .criteria-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .criteria-table th,
+        .criteria-table td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .criteria-table th {
+            background-color: #f1f3f5;
+            font-weight: 600;
+            color: #495057;
+            width: 40%;
+        }
+
+        .criteria-table select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .criteria-table select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        .score-display {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #2c3e50;
+            text-align: center;
+            padding: 8px;
+            background: #ecf0f1;
+            border-radius: 5px;
+            min-width: 60px;
+        }
+
+        .results-container {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 30px;
+            border: 2px solid #e9ecef;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .result-value {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .total-score {
+            font-size: 1.4rem;
+            color: #2c3e50;
+        }
+
+        .status-approved {
+            color: #27ae60;
+        }
+
+        .status-conditional {
+            color: #f39c12;
+        }
+
+        .status-failed {
+            color: #e74c3c;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 30px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .criteria-table th,
+            .criteria-table td {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            
+            .result-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>سیستم ثبت برگه‌های ارزیابی</h1>
+    <p>فرم ارزیابی تخصصی مقالات</p>
+    <p id="welcomeMessage" style="margin-top: 10px; font-size: 1rem;"></p>
+    <button onclick="logout()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+        خروج
+    </button>
+</div>
+
+        <div class="evaluation-type">
+            <select class="type-select" id="evaluationType">
+                <option value="">-- انتخاب نوع ارزیابی --</option>
+                <option value="tahlil">تالیف</option>
+                <option value="aval">ارزیابی اول</option>
+                <option value="management-aval">مدیریت ارزیابی اول</option>
+                <option value="dovvom">ارزیابی دوم</option>
+                <option value="bazbini">بازبینی</option>
+                <option value="management-dovvom">مدیریت ارزیابی دوم</option>
+            </select>
+        </div>
+
+        <div class="form-container">
+            <form id="evaluationForm">
+                <table class="criteria-table">
+                    <tr>
+                        <th>۱. اشتمال مقاله بر همه بخش‌های اصلی</th>
+                        <td>
+                            <select name="criterion1" required class="score-input">
+                                <option value="no-need" selected>تکمله نمی‌خواهد</option>
+                                <option value="author-guidance">تکمله می‌خواهد ناشی از درست راهنمایی نشدن مولف</option>
+                                <option value="author-flaw">تکمله می‌خواهد ناشی از نقص کار مولف</option>
+                            </select>
+                        </td>
+                        <td class="score-display" id="score1">75</td>
+                    </tr>
+                    <tr>
+                        <th>۲. پیراسته بودن مقاله از مطالب غیر دانشنامه‌ای یا بدون ربط مستقیم با موضوع یا مربوط به سایر مدخل‌ها</th>
+                        <td>
+                            <select name="criterion2" required class="score-input">
+                                <option value="excellent" selected>عالی</option>
+                                <option value="low-need">نیازمند رفع نقص و اصلاح کم</option>
+                                <option value="medium-need">نیازمند رفع نقص و اصلاح متوسط</option>
+                                <option value="high-need">نیازمند رفع نقص و اصلاح نسبتاً زیاد</option>
+                                <option value="very-high-need">نیازمند رفع نقص و اصلاح بسیار زیاد</option>
+                            </select>
+                        </td>
+                        <td class="score-display" id="score2">25</td>
+                    </tr>
+                    <tr>
+                        <th>۳. اشتمال مقاله بر اجزای لازم</th>
+                        <td>
+                            <select name="criterion3" required class="score-input">
+                                <option value="excellent" selected>عالی</option>
+                                <option value="low-need">نیازمند رفع نقص و اصلاح کم</option>
+                                <option value="medium-need">نیازمند رفع نقص و اصلاح متوسط</option>
+                                <option value="high-need">نیازمند رفع نقص و اصلاح نسبتاً زیاد</option>
+                                <option value="very-high-need">نیازمند رفع نقص و اصلاح بسیار زیاد</option>
+                            </select>
+                        </td>
+                        <td class="score-display" id="score3">75</td>
+                    </tr>
+                    <tr>
+                        <th>۴. استفاده از مهم‌ترین منابع</th>
+                        <td>
+                            <select name="criterion4" required class="score-input">
+                                <option value="excellent" selected>عالی</option>
+                                <option value="low-need">نیازمند رفع نقص و اصلاح کم</option>
+                                <option value="medium-need">نیازمند رفع نقص و اصلاح متوسط</option>
+                                <option value="high-need">نیازمند رفع نقص و اصلاح نسبتاً زیاد</option>
+                                <option value="very-high-need">نیازمند رفع نقص و اصلاح بسیار زیاد</option>
+                            </select>
+                        </td>
+                        <td class="score-display" id="score4">75</td>
+                    </tr>
+                    <tr>
+                        <th>۵. پیراسته بودن از منابع ضعیف، واسطه و ترجمه‌های نامعتبر</th>
+                        <td>
+                            <select name="criterion5" required class="score-input">
+                                <option value="excellent" selected>عالی</option>
+                                <option value="low-need">نیازمند رفع نقص و اصلاح کم</option>
+                                <option value="medium-need">نیازمند رفع نقص و اصلاح متوسط</option>
+                                <option value="high-need">نیازمند رفع نقص و اصلاح نسبتاً زیاد</option>
+                                <option value="very-high-need">نیازمند رفع نقص و اصلاح بسیار زیاد</option>
+                            </select>
+                        </td>
+                        <td class="score-display" id="score5">25</td>
+                    </tr>
+                    <tr>
+                        <th>۶. انسجام درونی مقاله و توالی منطقی مباحث و رعایت الگوی مقالات</th>
+                        <td>
+                            <select name="criterion6" required class="score-input">
+                                <option value="excellent" selected>عالی</option>
+                                <option value="low-need">نیازمند رفع نقص و اصلاح کم</option>
+                                <option value="medium-need">نیازمند رفع نقص و اصلاح متوسط</option>
+                                <option value="high-need">نیازمند رفع نقص و اصلاح نسبتاً زیاد</option>
+                                <option value="very-high-need">نیازمند رفع نقص و اصلاح بسیار زیاد</option>
+                            </select>
+                        </td>
+                        <td class="score-display" id="score6">75</td>
+                    </tr>
+                    <tr>
+                        <th>۷. روانی و پختگی زبان و رعایت قواعد دستوری و زبانی</th>
+                        <td>
+                            <select name="criterion7" required class="score-input">
+                                <option value="excellent" selected>عالی</option>
+                                <option value="low-need">نیازمند رفع نقص و اصلاح کم</option>
+                                <option value="medium-need">نیازمند رفع نقص و اصلاح متوسط</option>
+                                <option value="high-need">نیازمند رفع نقص و اصلاح نسبتاً زیاد</option>
+                                <option value="very-high-need">نیازمند رفع نقص و اصلاح بسیار زیاد</option>
+                            </select>
+                        </td>
+                        <td class="score-display" id="score7">25</td>
+                    </tr>
+                    <tr>
+                        <th>۸. ایجاز زبانی و پرهیز از حشو و اطناب</th>
+                        <td>
+                            <select name="criterion8" required class="score-input">
+                                <option value="excellent" selected>عالی</option>
+                                <option value="low-need">نیازمند رفع نقص و اصلاح کم</option>
+                                <option value="medium-need">نیازمند رفع نقص و اصلاح متوسط</option>
+                                <option value="high-need">نیازمند رفع نقص و اصلاح نسبتاً زیاد</option>
+                                <option value="very-high-need">نیازمند رفع نقص و اصلاح بسیار زیاد</option>
+                            </select>
+                        </td>
+                        <td class="score-display" id="score8">75</td>
+                    </tr>
+                    <tr>
+                        <th>۹. رعایت قواعد ویرایش استنادی (بر اساس شیوه‌نامه کتابشناسی) و ضبط منابع آخر مقاله</th>
+                        <td>
+                            <select name="criterion9" required class="score-input">
+                                <option value="excellent" selected>عالی</option>
+                                <option value="low-need">نیازمند رفع نقص و اصلاح کم</option>
+                                <option value="medium-need">نیازمند رفع نقص و اصلاح متوسط</option>
+                                <option value="high-need">نیازمند رفع نقص و اصلاح نسبتاً زیاد</option>
+                                <option value="very-high-need">نیازمند رفع نقص و اصلاح بسیار زیاد</option>
+                            </select>
+                        </td>
+                        <td class="score-display" id="score9">50</td>
+                    </tr>
+                </table>
+
+                <div class="results-container">
+                    <div class="result-item">
+                        <span class="result-label">منفی دو ردیف:</span>
+                        <span class="result-value" id="negativeTwoRows">100</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">مجموع امتیازات:</span>
+                        <span class="result-value total-score" id="totalScore">500</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">نتیجه ارزیابی:</span>
+                        <span class="result-value status-approved" id="evaluationResult">مقبول</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">ثبت ارزیابی</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // سیستم امتیازدهی
+        const scoringSystem = {
+            criterion1: {
+                'no-need': 75,
+                'author-guidance': 65,
+                'author-flaw': 25
+            },
+            criterion2: {
+                'excellent': 25,
+                'low-need': 20,
+                'medium-need': 15,
+                'high-need': 10,
+                'very-high-need': 5
+            },
+            criterion3: {
+                'excellent': 75,
+                'low-need': 60,
+                'medium-need': 45,
+                'high-need': 30,
+                'very-high-need': 15
+            },
+            criterion4: {
+                'excellent': 75,
+                'low-need': 60,
+                'medium-need': 45,
+                'high-need': 30,
+                'very-high-need': 15
+            },
+            criterion5: {
+                'excellent': 25,
+                'low-need': 20,
+                'medium-need': 15,
+                'high-need': 10,
+                'very-high-need': 5
+            },
+            criterion6: {
+                'excellent': 75,
+                'low-need': 60,
+                'medium-need': 45,
+                'high-need': 30,
+                'very-high-need': 15
+            },
+            criterion7: {
+                'excellent': 25,
+                'low-need': 20,
+                'medium-need': 15,
+                'high-need': 10,
+                'very-high-need': 5
+            },
+            criterion8: {
+                'excellent': 75,
+                'low-need': 60,
+                'medium-need': 45,
+                'high-need': 30,
+                'very-high-need': 15
+            },
+            criterion9: {
+                'excellent': 50,
+                'low-need': 40,
+                'medium-need': 30,
+                'high-need': 20,
+                'very-high-need': 10
+            }
+        };
+
+        // تابع محاسبه امتیازات
+        function calculateScores() {
+            let totalScore = 0;
+            
+            // محاسبه امتیاز هر ردیف و نمایش آن
+            for (let i = 1; i <= 9; i++) {
+                const select = document.querySelector(`select[name="criterion${i}"]`);
+                const scoreDisplay = document.getElementById(`score${i}`);
+                const selectedValue = select.value;
+                const score = scoringSystem[`criterion${i}`][selectedValue];
+                
+                scoreDisplay.textContent = score;
+                totalScore += score;
+            }
+            
+            // محاسبه منفی دو ردیف
+            const score1 = scoringSystem.criterion1[document.querySelector('select[name="criterion1"]').value];
+            const score2 = scoringSystem.criterion2[document.querySelector('select[name="criterion2"]').value];
+            const negativeTwoRows = 100 - (score1 + score2);
+            
+            // به روزرسانی نمایش نتایج
+            document.getElementById('negativeTwoRows').textContent = negativeTwoRows;
+            document.getElementById('totalScore').textContent = totalScore;
+            
+            // تعیین نتیجه نهایی
+            const resultElement = document.getElementById('evaluationResult');
+            if (totalScore > 250) {
+                resultElement.textContent = 'مقبول';
+                resultElement.className = 'result-value status-approved';
+            } else if (totalScore >= 200) {
+                resultElement.textContent = 'مشروط (کسر نمره)';
+                resultElement.className = 'result-value status-conditional';
+            } else {
+                resultElement.textContent = 'مردود';
+                resultElement.className = 'result-value status-failed';
+            }
+        }
+
+        // افزودن event listener به تمام کامبوباکس‌ها
+        document.querySelectorAll('.score-input').forEach(select => {
+            select.addEventListener('change', calculateScores);
+        });
+
+        // محاسبه اولیه هنگام لود صفحه
+        document.addEventListener('DOMContentLoaded', calculateScores);
+
+        // مدیریت ارسال فرم
+        document.getElementById('evaluationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const evaluationType = document.getElementById('evaluationType').value;
+            if (!evaluationType) {
+                alert('لطفاً نوع ارزیابی را انتخاب کنید');
+                return;
+            }
+
+            // جمع‌آوری داده‌های فرم
+            const formData = new FormData(this);
+            const data = {
+                evaluationType: evaluationType,
+                criteria: {},
+                scores: {},
+                totalScore: document.getElementById('totalScore').textContent,
+                result: document.getElementById('evaluationResult').textContent
+            };
+
+            for (let i = 1; i <= 9; i++) {
+                const select = document.querySelector(`select[name="criterion${i}"]`);
+                data.criteria[`criterion${i}`] = select.value;
+                data.scores[`criterion${i}`] = document.getElementById(`score${i}`).textContent;
+            }
+
+            // اینجا می‌تونی داده‌ها رو به سرور ارسال کنی
+            console.log('داده‌های ارزیابی:', data);
+            alert(`ارزیابی با موفقیت ثبت شد!\n\nامتیاز کل: ${data.totalScore}\nنتیجه: ${data.result}`);
+        });
+    </script>
+	<!-- این اسکریپت رو قبل از </body> در فایل main.html اضافه کن -->
+<script>
+    // چک کن که کاربر لاگین کرده یا نه
+    if(localStorage.getItem('isLoggedIn') !== 'true') {
+        window.location.href = 'index.html';
+    }
+    
+    // نمایش نام کاربری
+    const username = localStorage.getItem('username') || 'کاربر';
+    document.getElementById('welcomeMessage').textContent = `خوش آمدید ${username}`;
+    
+    // دکمه خروج
+    function logout() {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('username');
+        window.location.href = 'index.html';
+    }
+</script>
+</body>
+</html>
