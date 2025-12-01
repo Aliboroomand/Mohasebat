@@ -80,10 +80,23 @@
             font-size: 0.9rem;
             margin-top: 20px;
         }
+        
+        .logout-success {
+            background: #27ae60;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
+        <!-- نمایش پیام خروج موفق -->
+        <div id="logoutMessage" style="display: none;" class="logout-success">
+            ✅ با موفقیت خارج شدید
+        </div>
+        
         <h2>🔐 ورود به سیستم</h2>
         <input type="text" id="username" class="login-input" placeholder="نام کاربری" autocomplete="off">
         <input type="password" id="password" class="login-input" placeholder="رمز عبور" autocomplete="off">
@@ -93,8 +106,17 @@
     </div>
 
     <script>
+        // چک کردن اگر از صفحه خروج آمده
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('logout') === 'true') {
+            document.getElementById('logoutMessage').style.display = 'block';
+            
+            // حذف پارامتر از URL بدون رفرش صفحه
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
         const validUsers = {
-            "Admin": "65800",
+            "admin": "123456",
             "moderator": "654321",
             "user": "111111"
         };
@@ -107,6 +129,8 @@
             if (validUsers[username] && validUsers[username] === password) {
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('username', username);
+                localStorage.setItem('loginTime', new Date().toISOString());
+                
                 window.location.href = 'main.html';
             } else {
                 errorMsg.style.display = 'block';
@@ -121,9 +145,24 @@
             }
         });
         
-        // اگر قبلاً لاگین کرده
-        if(localStorage.getItem('isLoggedIn') === 'true') {
-            window.location.href = 'main.html';
+        // اگر قبلاً لاگین کرده و هنوز اعتبار داره
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
+        const loginTime = localStorage.getItem('loginTime');
+        
+        if (isLoggedIn === 'true' && loginTime) {
+            // چک کردن زمان لاگین (حداکثر ۸ ساعت)
+            const loginDate = new Date(loginTime);
+            const currentDate = new Date();
+            const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
+            
+            if (hoursDiff < 8) {
+                window.location.href = 'main.html';
+            } else {
+                // زمان لاگین منقضی شده
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('username');
+                localStorage.removeItem('loginTime');
+            }
         }
     </script>
 </body>
