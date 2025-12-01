@@ -40,17 +40,21 @@
             margin-bottom: 10px;
         }
 
-        .logout-btn {
-            position: absolute;
-            left: 20px;
-            top: 20px;
-            background: #e74c3c;
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
             color: white;
-            border: none;
-            padding: 10px 20px;
+            border: 1px solid white;
+            padding: 8px 15px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 0.9rem;
+            text-decoration: none;
         }
 
         .evaluation-type {
@@ -203,87 +207,21 @@
                 align-items: flex-start;
                 gap: 5px;
             }
-            
-            .logout-btn {
-                position: relative;
-                left: 0;
-                top: 0;
-                margin-bottom: 10px;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <button class="logout-btn" onclick="logout()">خروج</button>
             <h1>سیستم ثبت برگه‌های ارزیابی</h1>
             <p>فرم ارزیابی تخصصی مقالات</p>
+            <div class="nav-buttons">
+                <a href="persons.html" class="nav-btn">👥 مدیریت اشخاص</a>
+                <a href="index.html" class="nav-btn">🚪 خروج</a>
+            </div>
             <p id="welcomeMessage" style="margin-top: 10px; font-size: 1rem;"></p>
         </div>
-        <!-- این رو در main.html در بخش هدر اضافه کن -->
-<a href="persons.html" style="background: #9b59b6; color: white; padding: 10px 15px; border-radius: 5px; text-decoration: none; margin: 5px;">
-    👥 مدیریت اشخاص
-</a>
-<div class="form-group">
-    <label for="evaluator">ارزیاب</label>
-    <select id="evaluator" class="form-control" required>
-        <option value="">-- انتخاب ارزیاب --</option>
-        <!-- اینجا با JavaScript پر میشه -->
-    </select>
-</div>
-// پر کردن dropdown اشخاص
-function populatePersonDropdowns() {
-    const evaluatorSelect = document.getElementById('evaluator');
-    const authorSelect = document.getElementById('author');
-    
-    // پاک کردن options فعلی
-    evaluatorSelect.innerHTML = '<option value="">-- انتخاب ارزیاب --</option>';
-    authorSelect.innerHTML = '<option value="">-- انتخاب مولف --</option>';
-    
-    // دریافت همه اشخاص
-    const allPersons = window.appData.getAllPersons();
-    
-    // اضافه کردن هر شخص به dropdownها
-    allPersons.forEach(person => {
-        const fullName = `${person.firstName} ${person.lastName}`;
-        const optionText = `${fullName} (${person.code}) - ${person.type === 'internal' ? 'داخلی' : 'خارجی'}`;
-        const optionValue = person.code;
-        
-        // برای ارزیاب
-        const evaluatorOption = document.createElement('option');
-        evaluatorOption.value = optionValue;
-        evaluatorOption.textContent = optionText;
-        evaluatorSelect.appendChild(evaluatorOption);
-        
-        // برای مولف
-        const authorOption = document.createElement('option');
-        authorOption.value = optionValue;
-        authorOption.textContent = optionText;
-        authorSelect.appendChild(authorOption.cloneNode(true));
-    });
-    
-    // اگر شخصی نبود
-    if (allPersons.length === 0) {
-        const noPersonOption = document.createElement('option');
-        noPersonOption.value = "";
-        noPersonOption.textContent = "هیچ شخصی ثبت نشده - ابتدا به مدیریت اشخاص بروید";
-        evaluatorSelect.appendChild(noPersonOption);
-        authorSelect.appendChild(noPersonOption.cloneNode(true));
-    }
-}
 
-// وقتی صفحه load شد
-document.addEventListener('DOMContentLoaded', function() {
-    populatePersonDropdowns();
-});
-<div class="form-group">
-    <label for="author">مولف</label>
-    <select id="author" class="form-control" required>
-        <option value="">-- انتخاب مولف --</option>
-        <!-- اینجا با JavaScript پر میشه -->
-    </select>
-</div>
         <div class="evaluation-type">
             <select class="type-select" id="evaluationType">
                 <option value="">-- انتخاب نوع ارزیابی --</option>
@@ -436,8 +374,11 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 
+    <!-- اضافه کردن data-store -->
+    <script src="data-store.js"></script>
+    
     <script>
-        // چک کن که کاربر لاگین کرده یا نه
+        // چک لاگین
         if(localStorage.getItem('isLoggedIn') !== 'true') {
             window.location.href = 'index.html';
         }
@@ -446,83 +387,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const username = localStorage.getItem('username') || 'کاربر';
         document.getElementById('welcomeMessage').textContent = `خوش آمدید ${username}`;
         
-        // دکمه خروج
-        function logout() {
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('username');
-            window.location.href = 'index.html';
-        }
-
         // سیستم امتیازدهی
         const scoringSystem = {
-            criterion1: {
-                'no-need': 75,
-                'author-guidance': 65,
-                'author-flaw': 25
-            },
-            criterion2: {
-                'excellent': 25,
-                'low-need': 20,
-                'medium-need': 15,
-                'high-need': 10,
-                'very-high-need': 5
-            },
-            criterion3: {
-                'excellent': 75,
-                'low-need': 60,
-                'medium-need': 45,
-                'high-need': 30,
-                'very-high-need': 15
-            },
-            criterion4: {
-                'excellent': 75,
-                'low-need': 60,
-                'medium-need': 45,
-                'high-need': 30,
-                'very-high-need': 15
-            },
-            criterion5: {
-                'excellent': 25,
-                'low-need': 20,
-                'medium-need': 15,
-                'high-need': 10,
-                'very-high-need': 5
-            },
-            criterion6: {
-                'excellent': 75,
-                'low-need': 60,
-                'medium-need': 45,
-                'high-need': 30,
-                'very-high-need': 15
-            },
-            criterion7: {
-                'excellent': 25,
-                'low-need': 20,
-                'medium-need': 15,
-                'high-need': 10,
-                'very-high-need': 5
-            },
-            criterion8: {
-                'excellent': 75,
-                'low-need': 60,
-                'medium-need': 45,
-                'high-need': 30,
-                'very-high-need': 15
-            },
-            criterion9: {
-                'excellent': 50,
-                'low-need': 40,
-                'medium-need': 30,
-                'high-need': 20,
-                'very-high-need': 10
-            }
+            criterion1: {'no-need': 75, 'author-guidance': 65, 'author-flaw': 25},
+            criterion2: {'excellent': 25, 'low-need': 20, 'medium-need': 15, 'high-need': 10, 'very-high-need': 5},
+            criterion3: {'excellent': 75, 'low-need': 60, 'medium-need': 45, 'high-need': 30, 'very-high-need': 15},
+            criterion4: {'excellent': 75, 'low-need': 60, 'medium-need': 45, 'high-need': 30, 'very-high-need': 15},
+            criterion5: {'excellent': 25, 'low-need': 20, 'medium-need': 15, 'high-need': 10, 'very-high-need': 5},
+            criterion6: {'excellent': 75, 'low-need': 60, 'medium-need': 45, 'high-need': 30, 'very-high-need': 15},
+            criterion7: {'excellent': 25, 'low-need': 20, 'medium-need': 15, 'high-need': 10, 'very-high-need': 5},
+            criterion8: {'excellent': 75, 'low-need': 60, 'medium-need': 45, 'high-need': 30, 'very-high-need': 15},
+            criterion9: {'excellent': 50, 'low-need': 40, 'medium-need': 30, 'high-need': 20, 'very-high-need': 10}
         };
 
         // تابع محاسبه امتیازات
         function calculateScores() {
             let totalScore = 0;
             
-            // محاسبه امتیاز هر ردیف و نمایش آن
             for (let i = 1; i <= 9; i++) {
                 const select = document.querySelector(`select[name="criterion${i}"]`);
                 const scoreDisplay = document.getElementById(`score${i}`);
@@ -581,23 +462,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 criteria: {},
                 scores: {},
                 totalScore: document.getElementById('totalScore').textContent,
-                result: document.getElementById('evaluationResult').textContent
+                negativeTwoRows: document.getElementById('negativeTwoRows').textContent,
+                result: document.getElementById('evaluationResult').textContent,
+                timestamp: new Date().toLocaleString('fa-IR'),
+                evaluator: username
             };
 
             for (let i = 1; i <= 9; i++) {
                 const select = document.querySelector(`select[name="criterion${i}"]`);
-                data.criteria[`criterion${i}`] = select.value;
+                data.criteria[`criterion${i}`] = select.options[select.selectedIndex].text;
                 data.scores[`criterion${i}`] = document.getElementById(`score${i}`).textContent;
             }
 
-            console.log('داده‌های ارزیابی:', data);
-            alert(`ارزیابی با موفقیت ثبت شد!\n\nامتیاز کل: ${data.totalScore}\nنتیجه: ${data.result}`);
+            // ذخیره ارزیابی
+            const evaluations = JSON.parse(localStorage.getItem('evaluations') || '[]');
+            evaluations.push(data);
+            localStorage.setItem('evaluations', JSON.stringify(evaluations));
+
+            alert(`✅ ارزیابی ثبت شد!\n\nامتیاز کل: ${data.totalScore}\nنتیجه: ${data.result}`);
+            
+            // ریست کردن فرم
+            this.reset();
+            document.getElementById('evaluationType').value = '';
+            calculateScores();
         });
     </script>
-    <script src="data-store.js"></script>
 </body>
 </html>
-
-
-
-
