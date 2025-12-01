@@ -1,161 +1,473 @@
-// متغیرهای global
-let externalPersonCounter = 5001;
-let persons = [];
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzbV8b73KFC-W7KB0dEFs1SBFxAYAWyfKiEmis8NPnDRCswQ1MR9cv7oaBNJWp_PrH4A/exec';
-
-// تابع تغییر نوع شخص
-function togglePersonCode() {
-    const personType = document.querySelector('input[name="personType"]:checked').value;
-    const personCodeInput = document.getElementById('personCode');
-    
-    if (personType === 'external') {
-        personCodeInput.value = externalPersonCounter;
-        personCodeInput.readOnly = true;
-        personCodeInput.style.background = '#f0f0f0';
-    } else {
-        personCodeInput.value = '';
-        personCodeInput.readOnly = false;
-        personCodeInput.style.background = 'white';
-    }
-}
-
-// تابع پاک کردن فرم
-function clearForm() {
-    document.getElementById('personForm').reset();
-    togglePersonCode();
-}
-
-// تابع ذخیره در Google Sheets
-async function savePersonToSheets(personData) {
-    try {
-        const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(personData)
-        });
-        
-        const result = await response.json();
-        return result.success;
-    } catch (error) {
-        console.error('خطا در ذخیره‌سازی:', error);
-        return false;
-    }
-}
-
-// تابع بارگذاری از Google Sheets
-async function loadPersonsFromSheets() {
-    try {
-        const response = await fetch(SCRIPT_URL);
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-    } catch (error) {
-        console.error('خطا در دریافت داده:', error);
-        return [];
-    }
-}
-
-// تابع بارگذاری همه اشخاص
-async function loadAllPersons() {
-    persons = await loadPersonsFromSheets();
-    updatePersonsTable();
-}
-
-// تابع بروزرسانی جدول
-function updatePersonsTable() {
-    const tbody = document.getElementById('personsTableBody');
-    tbody.innerHTML = '';
-    
-    if (persons.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: #666;">هیچ شخصی ثبت نشده است</td></tr>';
-        return;
-    }
-    
-    persons.forEach((person, index) => {
-        const row = document.createElement('tr');
-        
-        row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${person.code}</td>
-            <td>${person.firstName} ${person.lastName}</td>
-            <td>
-                <span class="person-type-${person.type}">
-                    ${person.type === 'internal' ? 'داخلی' : 'خارجی'}
-                </span>
-            </td>
-            <td>${person.groupCode}</td>
-            <td>${person.position}</td>
-            <td>${person.startDate}</td>
-            <td>${person.accuracyRate}</td>
-            <td>
-                <button onclick="editPerson('${person.code}')" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">✏️</button>
-                <button onclick="deletePerson('${person.code}')" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🗑️</button>
-            </td>
-        `;
-        
-        tbody.appendChild(row);
-    });
-}
-
-// توابع ویرایش و حذف (موقت)
-function editPerson(personCode) {
-    alert('ویژگی ویرایش به زودی اضافه خواهد شد');
-}
-
-function deletePerson(personCode) {
-    alert('ویژگی حذف به زودی اضافه خواهد شد');
-}
-
-// وقتی صفحه کامل لود شد
-document.addEventListener('DOMContentLoaded', function() {
-    // مقداردهی اولیه
-    togglePersonCode();
-    loadAllPersons();
-    
-    // اضافه کردن event listener به فرم
-    document.getElementById('personForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const personData = {
-            code: formData.get('personCode'),
-            firstName: formData.get('firstName'),
-            lastName: formData.get('lastName'),
-            type: formData.get('personType'),
-            startDate: formData.get('startDate'),
-            endDate: formData.get('endDate'),
-            groupCode: formData.get('groupCode'),
-            position: formData.get('position'),
-            accuracyRate: formData.get('accuracyRate'),
-            ratioRate: formData.get('ratioRate'),
-            description: formData.get('description')
-        };
-        
-        // اعتبارسنجی
-        if (!personData.code) {
-            alert('لطفاً کد شخص را وارد کنید');
-            return;
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدیریت اشخاص - سیستم ارزیابی</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        // ذخیره در Google Sheets
-        const success = await savePersonToSheets(personData);
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
         
-        if (success) {
-            // اگر خارجی هست، شمارنده رو افزایش بده
-            if (personData.type === 'external') {
-                externalPersonCounter++;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .form-control:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 5px;
+        }
+        
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: right;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .data-table th {
+            background-color: #f1f3f5;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .person-type-internal {
+            background: #e8f5e8;
+            color: #27ae60;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .person-type-external {
+            background: #fff3cd;
+            color: #f39c12;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 سیستم مدیریت اشخاص</h1>
+            <p>ثبت و مدیریت اطلاعات ارزیابان و مولفان</p>
+            <div class="nav-buttons">
+                <a href="main.html" class="nav-btn">📊 بازگشت به ارزیابی</a>
+                <a href="index.html" class="nav-btn">🚪 خروج</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- فرم ثبت شخص جدید -->
+            <div class="form-section">
+                <h2>👤 ثبت شخص جدید</h2>
+                <form id="personForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>نوع شخص</label>
+                            <div class="radio-group">
+                                <label>
+                                    <input type="radio" name="personType" value="internal" onchange="togglePersonCode()" checked>
+                                    داخلی (بنیاد)
+                                </label>
+                                <label>
+                                    <input type="radio" name="personType" value="external" onchange="togglePersonCode()">
+                                    خارجی
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="personCode">کد شخص</label>
+                            <input type="text" id="personCode" name="personCode" class="form-control" placeholder="برای افراد داخلی وارد کنید">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstName">نام</label>
+                            <input type="text" id="firstName" name="firstName" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="lastName">نام خانوادگی</label>
+                            <input type="text" id="lastName" name="lastName" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startDate">تاریخ شروع به کار</label>
+                            <input type="text" id="startDate" name="startDate" class="form-control" placeholder="1403/01/01" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="endDate">تاریخ پایان کار (اختیاری)</label>
+                            <input type="text" id="endDate" name="endDate" class="form-control" placeholder="1403/12/29">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="groupCode">کد گروه</label>
+                            <input type="text" id="groupCode" name="groupCode" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="position">جایگاه</label>
+                            <input type="text" id="position" name="position" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accuracyRate">ضریب دقت</label>
+                            <input type="number" id="accuracyRate" name="accuracyRate" class="form-control" step="0.01" value="1.00">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="ratioRate">ضریب نسبت</label>
+                            <input type="number" id="ratioRate" name="ratioRate" class="form-control" step="0.01" value="1.00">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 2;">
+                            <label for="description">توضیحات</label>
+                            <textarea id="description" name="description" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <button type="submit" class="btn btn-primary">💾 ثبت شخص</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">🗑️ پاک کردن فرم</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- لیست اشخاص ثبت شده -->
+            <div class="form-section">
+                <h2>📋 لیست اشخاص ثبت شده</h2>
+                <div class="table-container">
+                    <table class="data-table" id="personsTable">
+                        <thead>
+                            <tr>
+                                <th>ردیف</th>
+                                <th>کد شخص</th>
+                                <th>نام و نام خانوادگی</th>
+                                <th>نوع</th>
+                                <th>کد گروه</th>
+                                <th>جایگاه</th>
+                                <th>تاریخ شروع</th>
+                                <th>ضریب دقت</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="personsTableBody">
+                            <!-- داده ها اینجا نمایش داده میشن -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // متغیرهای global
+        let externalPersonCounter = 5001;
+        let persons = [];
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzbV8b73KFC-W7KB0dEFs1SBFxAYAWyfKiEmis8NPnDRCswQ1MR9cv7oaBNJWp_PrH4A/exec';
+
+        // تابع تغییر نوع شخص
+        function togglePersonCode() {
+            const personType = document.querySelector('input[name="personType"]:checked').value;
+            const personCodeInput = document.getElementById('personCode');
+            
+            if (personType === 'external') {
+                personCodeInput.value = externalPersonCounter;
+                personCodeInput.readOnly = true;
+                personCodeInput.style.background = '#f0f0f0';
+            } else {
+                personCodeInput.value = '';
+                personCodeInput.readOnly = false;
+                personCodeInput.style.background = 'white';
+            }
+        }
+        
+        // تابع پاک کردن فرم
+        function clearForm() {
+            document.getElementById('personForm').reset();
+            togglePersonCode();
+        }
+
+        // تابع ذخیره در Google Sheets
+        async function savePersonToSheets(personData) {
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(personData)
+                });
+                
+                const result = await response.json();
+                return result.success;
+            } catch (error) {
+                console.error('خطا در ذخیره‌سازی:', error);
+                return false;
+            }
+        }
+
+        // تابع بارگذاری از Google Sheets
+        async function loadPersonsFromSheets() {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                return Array.isArray(data) ? data : [];
+            } catch (error) {
+                console.error('خطا در دریافت داده:', error);
+                return [];
+            }
+        }
+
+        // تابع بارگذاری همه اشخاص
+        async function loadAllPersons() {
+            persons = await loadPersonsFromSheets();
+            updatePersonsTable();
+        }
+
+        // تابع بروزرسانی جدول
+        function updatePersonsTable() {
+            const tbody = document.getElementById('personsTableBody');
+            tbody.innerHTML = '';
+            
+            if (persons.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: #666;">هیچ شخصی ثبت نشده است</td></tr>';
+                return;
             }
             
-            // بارگذاری مجدد داده‌ها از Sheets
-            await loadAllPersons();
-            
-            // پاک کردن فرم
-            clearForm();
-            
-            alert(`✅ شخص "${personData.firstName} ${personData.lastName}" با موفقیت در Google Sheets ثبت شد!`);
-        } else {
-            alert('❌ خطا در ذخیره‌سازی در Google Sheets!');
+            persons.forEach((person, index) => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${person.code}</td>
+                    <td>${person.firstName} ${person.lastName}</td>
+                    <td>
+                        <span class="person-type-${person.type}">
+                            ${person.type === 'internal' ? 'داخلی' : 'خارجی'}
+                        </span>
+                    </td>
+                    <td>${person.groupCode}</td>
+                    <td>${person.position}</td>
+                    <td>${person.startDate}</td>
+                    <td>${person.accuracyRate}</td>
+                    <td>
+                        <button onclick="editPerson('${person.code}')" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">✏️</button>
+                        <button onclick="deletePerson('${person.code}')" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🗑️</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
         }
-    });
-});
+
+        // توابع ویرایش و حذف (موقت)
+        function editPerson(personCode) {
+            alert('ویژگی ویرایش به زودی اضافه خواهد شد');
+        }
+
+        function deletePerson(personCode) {
+            alert('ویژگی حذف به زودی اضافه خواهد شد');
+        }
+
+        // وقتی صفحه کامل لود شد
+        document.addEventListener('DOMContentLoaded', function() {
+            // مقداردهی اولیه
+            togglePersonCode();
+            loadAllPersons();
+            
+            // اضافه کردن event listener به فرم
+            document.getElementById('personForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const personData = {
+                    code: formData.get('personCode'),
+                    firstName: formData.get('firstName'),
+                    lastName: formData.get('lastName'),
+                    type: formData.get('personType'),
+                    startDate: formData.get('startDate'),
+                    endDate: formData.get('endDate'),
+                    groupCode: formData.get('groupCode'),
+                    position: formData.get('position'),
+                    accuracyRate: formData.get('accuracyRate'),
+                    ratioRate: formData.get('ratioRate'),
+                    description: formData.get('description')
+                };
+                
+                // اعتبارسنجی
+                if (!personData.code) {
+                    alert('لطفاً کد شخص را وارد کنید');
+                    return;
+                }
+                
+                // ذخیره در Google Sheets
+                const success = await savePersonToSheets(personData);
+                
+                if (success) {
+                    // اگر خارجی هست، شمارنده رو افزایش بده
+                    if (personData.type === 'external') {
+                        externalPersonCounter++;
+                    }
+                    
+                    // بارگذاری مجدد داده‌ها از Sheets
+                    await loadAllPersons();
+                    
+                    // پاک کردن فرم
+                    clearForm();
+                    
+                    alert(`✅ شخص "${personData.firstName} ${personData.lastName}" با موفقیت در Google Sheets ثبت شد!`);
+                } else {
+                    alert('❌ خطا در ذخیره‌سازی در Google Sheets!');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
