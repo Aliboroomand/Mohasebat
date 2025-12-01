@@ -217,7 +217,7 @@
             <p>فرم ارزیابی تخصصی مقالات</p>
             <div class="nav-buttons">
                 <a href="persons.html" class="nav-btn">👥 مدیریت اشخاص</a>
-                <a href="index.html" class="nav-btn">🚪 خروج</a>
+                <a href="javascript:void(0)" onclick="logout()" class="nav-btn">🚪 خروج</a>
             </div>
             <p id="welcomeMessage" style="margin-top: 10px; font-size: 1rem;"></p>
         </div>
@@ -378,6 +378,16 @@
     <script src="data-store.js"></script>
     
     <script>
+        // تابع خروج
+        function logout() {
+            if (confirm('آیا می‌خواهید از سیستم خارج شوید؟')) {
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('username');
+                localStorage.removeItem('loginTime');
+                window.location.href = 'index.html?logout=true';
+            }
+        }
+        
         // چک لاگین
         if(localStorage.getItem('isLoggedIn') !== 'true') {
             window.location.href = 'index.html';
