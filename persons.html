@@ -65,7 +65,73 @@
             return false;
         }
     }
+// تابع نمایش اشخاص
+function displayPersonsInTable() {
+    const allPersons = window.appData.getAllPersons();
+    const tbody = document.getElementById('personsTableBody');
+    
+    tbody.innerHTML = '';
+    
+    if (allPersons.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 30px; color: #666;">
+                    <div style="margin-bottom: 10px;">📭 هیچ شخصی ثبت نشده است</div>
+                    <small>برای شروع، یک شخص جدید ثبت کنید</small>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    allPersons.forEach((person, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td><strong>${person.code}</strong></td>
+            <td>${person.firstName} ${person.lastName}</td>
+            <td>
+                <span class="person-type-${person.type}">
+                    ${person.type === 'internal' ? 'داخلی' : 'خارجی'}
+                </span>
+            </td>
+            <td>${person.groupCode}</td>
+            <td>${person.position}</td>
+            <td>${person.startDate}</td>
+            <td>${person.accuracyRate}</td>
+            <td>
+                <button onclick="editPerson('${person.code}')" class="btn-edit">✏️</button>
+                <button onclick="deletePerson('${person.code}')" class="btn-delete">🗑️</button>
+                <button onclick="showPersonInfo('${person.code}')" class="btn-info">👁️</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
 
+// تابع نمایش اطلاعات شخص
+function showPersonInfo(personCode) {
+    const person = window.appData.getPersonByCode(personCode);
+    if (person) {
+        const info = `
+        👤 اطلاعات شخص:
+        
+        کد: ${person.code}
+        نام: ${person.firstName} ${person.lastName}
+        نوع: ${person.type === 'internal' ? 'داخلی' : 'خارجی'}
+        تاریخ شروع: ${person.startDate}
+        ${person.endDate ? `تاریخ پایان: ${person.endDate}` : ''}
+        کد گروه: ${person.groupCode}
+        جایگاه: ${person.position}
+        ضریب دقت: ${person.accuracyRate}
+        ضریب نسبت: ${person.ratioRate}
+        ${person.description ? `توضیحات: ${person.description}` : ''}
+        
+        تاریخ ثبت: ${person.registerDate}
+        `;
+        alert(info);
+    }
+}
     // تابع بارگذاری از localStorage
     async function loadPersonsFromSheets() {
         try {
@@ -257,4 +323,5 @@
     });
 </script>
 <script src="data-store.js"></script>
+
 
