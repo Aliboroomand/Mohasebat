@@ -232,7 +232,51 @@
         <!-- اینجا با JavaScript پر میشه -->
     </select>
 </div>
+// پر کردن dropdown اشخاص
+function populatePersonDropdowns() {
+    const evaluatorSelect = document.getElementById('evaluator');
+    const authorSelect = document.getElementById('author');
+    
+    // پاک کردن options فعلی
+    evaluatorSelect.innerHTML = '<option value="">-- انتخاب ارزیاب --</option>';
+    authorSelect.innerHTML = '<option value="">-- انتخاب مولف --</option>';
+    
+    // دریافت همه اشخاص
+    const allPersons = window.appData.getAllPersons();
+    
+    // اضافه کردن هر شخص به dropdownها
+    allPersons.forEach(person => {
+        const fullName = `${person.firstName} ${person.lastName}`;
+        const optionText = `${fullName} (${person.code}) - ${person.type === 'internal' ? 'داخلی' : 'خارجی'}`;
+        const optionValue = person.code;
+        
+        // برای ارزیاب
+        const evaluatorOption = document.createElement('option');
+        evaluatorOption.value = optionValue;
+        evaluatorOption.textContent = optionText;
+        evaluatorSelect.appendChild(evaluatorOption);
+        
+        // برای مولف
+        const authorOption = document.createElement('option');
+        authorOption.value = optionValue;
+        authorOption.textContent = optionText;
+        authorSelect.appendChild(authorOption.cloneNode(true));
+    });
+    
+    // اگر شخصی نبود
+    if (allPersons.length === 0) {
+        const noPersonOption = document.createElement('option');
+        noPersonOption.value = "";
+        noPersonOption.textContent = "هیچ شخصی ثبت نشده - ابتدا به مدیریت اشخاص بروید";
+        evaluatorSelect.appendChild(noPersonOption);
+        authorSelect.appendChild(noPersonOption.cloneNode(true));
+    }
+}
 
+// وقتی صفحه load شد
+document.addEventListener('DOMContentLoaded', function() {
+    populatePersonDropdowns();
+});
 <div class="form-group">
     <label for="author">مولف</label>
     <select id="author" class="form-control" required>
@@ -553,6 +597,7 @@
     <script src="data-store.js"></script>
 </body>
 </html>
+
 
 
 
