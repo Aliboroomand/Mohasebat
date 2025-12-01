@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://script.google.com https://script.googleusercontent.com;">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مدیریت اشخاص - سیستم ارزیابی</title>
@@ -135,6 +134,12 @@
             color: white;
         }
         
+        .btn-export {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            margin-right: 10px;
+        }
+        
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
@@ -178,6 +183,14 @@
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 0.8rem;
+        }
+        
+        .export-section {
+            background: #e8f4fc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 1px solid #3498db;
         }
     </style>
 </head>
@@ -276,6 +289,7 @@
                     <div class="form-row">
                         <button type="submit" class="btn btn-primary">💾 ثبت شخص</button>
                         <button type="button" class="btn btn-secondary" onclick="clearForm()">🗑️ پاک کردن فرم</button>
+                        <button type="button" class="btn btn-export" onclick="exportToCSV()">📥 خروجی CSV</button>
                     </div>
                 </form>
             </div>
@@ -283,6 +297,11 @@
             <!-- لیست اشخاص ثبت شده -->
             <div class="form-section">
                 <h2>📋 لیست اشخاص ثبت شده</h2>
+                <div class="export-section">
+                    <strong>📊 وضعیت ذخیره‌سازی:</strong>
+                    <p>داده‌ها در مرورگر شما ذخیره می‌شوند. برای انتقال به Google Sheets از دکمه "خروجی CSV" استفاده کنید.</p>
+                    <p id="storageInfo"></p>
+                </div>
                 <div class="table-container">
                     <table class="data-table" id="personsTable">
                         <thead>
@@ -311,7 +330,6 @@
         // متغیرهای global
         let externalPersonCounter = 5001;
         let persons = [];
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywBDPD1RzTMKqdpQbN-WMv76pQinmc9t6A7-73LXG5T0wlMlC2bSeQn-v4SKY4XzLRfA/exec';
 
         // تابع تغییر نوع شخص
         function togglePersonCode() {
@@ -319,6 +337,16 @@
             const personCodeInput = document.getElementById('personCode');
             
             if (personType === 'external') {
+                // پیدا کردن بزرگترین کد خارجی موجود
+                const savedPersons = JSON.parse(localStorage.getItem('persons') || '[]');
+                const externalCodes = savedPersons
+                    .filter(p => p.type === 'external')
+                    .map(p => parseInt(p.code))
+                    .filter(code => !isNaN(code) && code >= 5001);
+                
+                const maxCode = externalCodes.length > 0 ? Math.max(...externalCodes) : 5000;
+                externalPersonCounter = maxCode + 1;
+                
                 personCodeInput.value = externalPersonCounter;
                 personCodeInput.readOnly = true;
                 personCodeInput.style.background = '#f0f0f0';
@@ -335,31 +363,51 @@
             togglePersonCode();
         }
 
-        // تابع ذخیره در Google Sheets
+        // تابع ذخیره در localStorage
         async function savePersonToSheets(personData) {
             try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(personData)
-                });
+                // اضافه کردن اطلاعات اضافی
+                const personWithMeta = {
+                    ...personData,
+                    id: Date.now(),
+                    registerDate: new Date().toLocaleDateString('fa-IR'),
+                    timestamp: new Date().toISOString()
+                };
                 
-                const result = await response.json();
-                return result.success;
+                // دریافت داده‌های موجود
+                const savedPersons = JSON.parse(localStorage.getItem('persons') || '[]');
+                
+                // اضافه کردن شخص جدید
+                savedPersons.push(personWithMeta);
+                
+                // ذخیره در localStorage
+                localStorage.setItem('persons', JSON.stringify(savedPersons));
+                
+                // به‌روزرسانی شمارنده برای خارجی‌ها
+                if (personData.type === 'external') {
+                    externalPersonCounter++;
+                }
+                
+                // نمایش اطلاعات ذخیره‌سازی
+                updateStorageInfo();
+                
+                console.log('✅ شخص ذخیره شد:', personWithMeta);
+                console.log('📊 تعداد کل اشخاص:', savedPersons.length);
+                
+                return true;
+                
             } catch (error) {
-                console.error('خطا در ذخیره‌سازی:', error);
+                console.error('❌ خطا در ذخیره‌سازی:', error);
                 return false;
             }
         }
 
-        // تابع بارگذاری از Google Sheets
+        // تابع بارگذاری از localStorage
         async function loadPersonsFromSheets() {
             try {
-                const response = await fetch(SCRIPT_URL);
-                const data = await response.json();
-                return Array.isArray(data) ? data : [];
+                const savedPersons = JSON.parse(localStorage.getItem('persons') || '[]');
+                console.log('📖 داده‌های بارگیری شد:', savedPersons.length, 'شخص');
+                return savedPersons;
             } catch (error) {
                 console.error('خطا در دریافت داده:', error);
                 return [];
@@ -370,6 +418,7 @@
         async function loadAllPersons() {
             persons = await loadPersonsFromSheets();
             updatePersonsTable();
+            updateStorageInfo();
         }
 
         // تابع بروزرسانی جدول
@@ -382,12 +431,15 @@
                 return;
             }
             
-            persons.forEach((person, index) => {
+            // مرتب‌سازی بر اساس تاریخ ثبت (جدیدترین اول)
+            const sortedPersons = [...persons].sort((a, b) => b.id - a.id);
+            
+            sortedPersons.forEach((person, index) => {
                 const row = document.createElement('tr');
                 
                 row.innerHTML = `
                     <td>${index + 1}</td>
-                    <td>${person.code}</td>
+                    <td><strong>${person.code}</strong></td>
                     <td>${person.firstName} ${person.lastName}</td>
                     <td>
                         <span class="person-type-${person.type}">
@@ -408,13 +460,101 @@
             });
         }
 
-        // توابع ویرایش و حذف (موقت)
+        // تابع نمایش اطلاعات ذخیره‌سازی
+        function updateStorageInfo() {
+            const savedPersons = JSON.parse(localStorage.getItem('persons') || '[]');
+            const totalCount = savedPersons.length;
+            const internalCount = savedPersons.filter(p => p.type === 'internal').length;
+            const externalCount = savedPersons.filter(p => p.type === 'external').length;
+            
+            document.getElementById('storageInfo').innerHTML = `
+                <strong>آمار:</strong> کل: ${totalCount} نفر | داخلی: ${internalCount} نفر | خارجی: ${externalCount} نفر
+            `;
+        }
+
+        // تابع خروجی CSV
+        function exportToCSV() {
+            const savedPersons = JSON.parse(localStorage.getItem('persons') || '[]');
+            
+            if (savedPersons.length === 0) {
+                alert('هیچ داده‌ای برای export وجود ندارد!');
+                return;
+            }
+            
+            // ایجاد هدر CSV
+            let csv = 'کد شخص,نام,نام خانوادگی,نوع,تاریخ شروع,تاریخ پایان,کد گروه,جایگاه,ضریب دقت,ضریب نسبت,تاریخ ثبت,توضیحات\n';
+            
+            // اضافه کردن داده‌ها
+            savedPersons.forEach(person => {
+                const row = [
+                    `"${person.code}"`,
+                    `"${person.firstName}"`,
+                    `"${person.lastName}"`,
+                    `"${person.type === 'internal' ? 'داخلی' : 'خارجی'}"`,
+                    `"${person.startDate}"`,
+                    `"${person.endDate || ''}"`,
+                    `"${person.groupCode}"`,
+                    `"${person.position}"`,
+                    `"${person.accuracyRate}"`,
+                    `"${person.ratioRate}"`,
+                    `"${person.registerDate}"`,
+                    `"${person.description || ''}"`
+                ].join(',');
+                
+                csv += row + '\n';
+            });
+            
+            // ایجاد فایل و دانلود
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `اشخاص_${new Date().toLocaleDateString('fa-IR')}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert(`✅ فایل CSV با ${savedPersons.length} رکورد آماده دانلود شد.\n\nمی‌توانید این فایل را در Google Sheets وارد کنید.`);
+        }
+
+        // توابع ویرایش و حذف
         function editPerson(personCode) {
-            alert('ویژگی ویرایش به زودی اضافه خواهد شد');
+            const savedPersons = JSON.parse(localStorage.getItem('persons') || '[]');
+            const person = savedPersons.find(p => p.code === personCode);
+            
+            if (person) {
+                // پر کردن فرم با اطلاعات شخص
+                document.querySelector(`input[name="personType"][value="${person.type}"]`).checked = true;
+                document.getElementById('personCode').value = person.code;
+                document.getElementById('firstName').value = person.firstName;
+                document.getElementById('lastName').value = person.lastName;
+                document.getElementById('startDate').value = person.startDate;
+                document.getElementById('endDate').value = person.endDate || '';
+                document.getElementById('groupCode').value = person.groupCode;
+                document.getElementById('position').value = person.position;
+                document.getElementById('accuracyRate').value = person.accuracyRate;
+                document.getElementById('ratioRate').value = person.ratioRate;
+                document.getElementById('description').value = person.description || '';
+                
+                togglePersonCode();
+                
+                alert('فرم با اطلاعات شخص پر شد. می‌توانید ویرایش کنید و دوباره ثبت کنید.');
+            }
         }
 
         function deletePerson(personCode) {
-            alert('ویژگی حذف به زودی اضافه خواهد شد');
+            if (confirm(`آیا از حذف شخص با کد ${personCode} مطمئن هستید؟`)) {
+                const savedPersons = JSON.parse(localStorage.getItem('persons') || '[]');
+                const updatedPersons = savedPersons.filter(p => p.code !== personCode);
+                
+                localStorage.setItem('persons', JSON.stringify(updatedPersons));
+                loadAllPersons();
+                
+                alert('✅ شخص با موفقیت حذف شد.');
+            }
         }
 
         // وقتی صفحه کامل لود شد
@@ -448,29 +588,22 @@
                     return;
                 }
                 
-                // ذخیره در Google Sheets
+                // ذخیره در localStorage
                 const success = await savePersonToSheets(personData);
                 
                 if (success) {
-                    // اگر خارجی هست، شمارنده رو افزایش بده
-                    if (personData.type === 'external') {
-                        externalPersonCounter++;
-                    }
-                    
-                    // بارگذاری مجدد داده‌ها از Sheets
+                    // بارگذاری مجدد داده‌ها
                     await loadAllPersons();
                     
                     // پاک کردن فرم
                     clearForm();
                     
-                    alert(`✅ شخص "${personData.firstName} ${personData.lastName}" با موفقیت در Google Sheets ثبت شد!`);
+                    alert(`✅ شخص "${personData.firstName} ${personData.lastName}" با موفقیت ثبت شد!\n\n• کد: ${personData.code}\n• نوع: ${personData.type === 'internal' ? 'داخلی' : 'خارجی'}\n• برای export به CSV از دکمه پایین استفاده کنید.`);
                 } else {
-                    alert('❌ خطا در ذخیره‌سازی در Google Sheets!');
+                    alert('❌ خطا در ثبت شخص!');
                 }
             });
         });
     </script>
 </body>
 </html>
-
-
