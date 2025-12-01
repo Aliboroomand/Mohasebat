@@ -536,14 +536,157 @@
                 alert('فرم با اطلاعات شخص پر شد. می‌توانید ویرایش کنید و دوباره ثبت کنید.');
             }
         }
-
-        // تابع حذف شخص
-        function deletePerson(personCode) {
-            if (confirm(`آیا از حذف شخص با کد ${personCode} مطمئن هستید؟`)) {
-                window.appData.deletePerson(personCode);
-                displayPersons();
-                alert('✅ شخص با موفقیت حذف شد.');
+        
+        // تابع ویرایش شخص - نسخه اصلاح شده
+        function editPerson(personCode) {
+            const person = window.appData.getPersonByCode(personCode);
+            if (person) {
+                // پر کردن فرم با اطلاعات شخص
+                document.querySelector(`input[name="personType"][value="${person.type}"]`).checked = true;
+                document.getElementById('personCode').value = person.code;
+                document.getElementById('firstName').value = person.firstName;
+                document.getElementById('lastName').value = person.lastName;
+                document.getElementById('startDate').value = person.startDate;
+                document.getElementById('endDate').value = person.endDate || '';
+                document.getElementById('groupCode').value = person.groupCode;
+                document.getElementById('position').value = person.position;
+                document.getElementById('accuracyRate').value = person.accuracyRate;
+                document.getElementById('ratioRate').value = person.ratioRate;
+                document.getElementById('description').value = person.description || '';
+                
+                // تغییر متن دکمه ثبت به "ویرایش"
+                const submitBtn = document.querySelector('#personForm button[type="submit"]');
+                submitBtn.innerHTML = '✏️ ویرایش شخص';
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-export'); // تغییر رنگ
+                
+                // ذخیره کد شخص برای ویرایش
+                document.getElementById('personForm').dataset.editingCode = personCode;
+                
+                // تغییر event listener فرم
+                document.getElementById('personForm').onsubmit = function(e) {
+                    e.preventDefault();
+                    updatePerson(personCode);
+                };
+                
+                togglePersonCode();
+                
+                alert('فرم با اطلاعات شخص پر شد. می‌توانید ویرایش کنید و دوباره ثبت کنید.');
             }
+        }
+        
+        // تابع آپدیت شخص
+        function updatePerson(personCode) {
+            const formData = new FormData(document.getElementById('personForm'));
+            const updatedData = {
+                code: formData.get('personCode'),
+                firstName: formData.get('firstName'),
+                lastName: formData.get('lastName'),
+                type: formData.get('personType'),
+                startDate: formData.get('startDate'),
+                endDate: formData.get('endDate') || '',
+                groupCode: formData.get('groupCode'),
+                position: formData.get('position'),
+                accuracyRate: formData.get('accuracyRate'),
+                ratioRate: formData.get('ratioRate'),
+                description: formData.get('description'),
+                updatedAt: new Date().toLocaleDateString('fa-IR')
+            };
+            
+            // دریافت همه اشخاص
+            const allPersons = window.appData.getPersons();
+            
+            // پیدا کردن index شخص
+            const personIndex = allPersons.findIndex(p => p.code === personCode);
+            
+            if (personIndex !== -1) {
+                // حفظ تاریخ ایجاد اصلی
+                const originalCreatedAt = allPersons[personIndex].createdAt;
+                
+                // آپدیت شخص
+                allPersons[personIndex] = {
+                    ...allPersons[personIndex],
+                    ...updatedData,
+                    id: allPersons[personIndex].id, // حفظ ID اصلی
+                    createdAt: originalCreatedAt, // حفظ تاریخ ایجاد اصلی
+                    updatedAt: new Date().toISOString()
+                };
+                
+                // ذخیره در localStorage
+                localStorage.setItem('persons', JSON.stringify(allPersons));
+                
+                // ریفرش صفحه
+                displayPersons();
+                
+                // ریست فرم
+                resetForm();
+                
+                alert(`✅ شخص "${updatedData.firstName} ${updatedData.lastName}" با موفقیت ویرایش شد!`);
+            }
+        }
+        
+        // تابع ریست فرم به حالت اول
+        function resetForm() {
+            clearForm();
+            
+            // بازگرداندن دکمه به حالت اول
+            const submitBtn = document.querySelector('#personForm button[type="submit"]');
+            submitBtn.innerHTML = '💾 ثبت شخص';
+            submitBtn.classList.remove('btn-export');
+            submitBtn.classList.add('btn-primary');
+            
+            // حذف event listener ویرایش
+            document.getElementById('personForm').onsubmit = handleFormSubmit;
+            delete document.getElementById('personForm').dataset.editingCode;
+        }
+        
+        // تابع handleFormSubmit اصلی
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(document.getElementById('personForm'));
+            const personData = {
+                code: formData.get('personCode'),
+                firstName: formData.get('firstName'),
+                lastName: formData.get('lastName'),
+                type: formData.get('personType'),
+                startDate: formData.get('startDate'),
+                endDate: formData.get('endDate') || '',
+                groupCode: formData.get('groupCode'),
+                position: formData.get('position'),
+                accuracyRate: formData.get('accuracyRate'),
+                ratioRate: formData.get('ratioRate'),
+                description: formData.get('description')
+            };
+            
+            // اعتبارسنجی
+            if (!personData.code) {
+                alert('لطفاً کد شخص را وارد کنید');
+                return;
+            }
+            
+            // چک کردن تکراری نبودن کد شخص
+            const existingPerson = window.appData.getPersonByCode(personData.code);
+            if (existingPerson && !document.getElementById('personForm').dataset.editingCode) {
+                alert(`کد شخص "${personData.code}" قبلاً ثبت شده است!`);
+                return;
+            }
+            
+            // اگر در حال ویرایش هستیم
+            if (document.getElementById('personForm').dataset.editingCode) {
+                updatePerson(document.getElementById('personForm').dataset.editingCode);
+                return;
+            }
+            
+            // اگر ثبت جدید است
+            const newPerson = window.appData.addPerson(personData);
+            
+            // نمایش موفقیت
+            alert(`✅ شخص "${personData.firstName} ${personData.lastName}" با موفقیت ثبت شد!`);
+            
+            // به‌روزرسانی نمایش
+            displayPersons();
+            clearForm();
         }
 
         // تابع export داده‌ها
@@ -573,3 +716,4 @@
     </script>
 </body>
 </html>
+
